@@ -1,6 +1,6 @@
 # Changelog Check
 
-Compares the latest changelog entry across a BBCode forum (any forum using BBCode, not tied to one specific site), GitHub Flavored Markdown, and Bethesda (CommonMark - Bethesda has no documented dialect name of its own; real sample files only show base CommonMark-level features in use), ignoring each platform's own formatting/markup, and **fails the run if the underlying content differs**. Useful if you maintain the same changelog on all three platforms and want to catch a stale/mistyped entry before it goes out under one platform but not another.
+Compares the latest changelog entry across a BBCode forum (any forum using BBCode), GitHub Flavored Markdown, and Bethesda (CommonMark), ignoring each platform's own formatting/markup, and **fails the run if the underlying content differs**. Useful if you maintain the same changelog on all three platforms and want to catch a stale/mistyped entry before it goes out under one platform but not another.
 
 It only compares bullet *content* (verb + description), not styling - a bolded word, a `<kbd>` tag, or a BBCode color won't trigger a mismatch, but a genuinely different word or a missing bullet will.
 
