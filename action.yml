@@ -1,17 +1,21 @@
 name: 'Changelog Check'
-description: 'Compares the latest changelog entry across BBCode, GitHub, and Bethesda; fails if content differs, ignoring formatting.'
+description: 'Compares changelog version/date/content across BBCode, GitHub, and Bethesda, and optionally the manifest; fails on any real disagreement.'
 author: 'MPHONlC'
 branding:
   icon: 'file-text'
   color: 'blue'
 
 inputs:
+  plain_file:
+    description: 'Path to the plain-setext root changelog ("Version: X.X.X (YYYY-MM-DD)" style)'
+    required: false
+    default: 'CHANGELOG.md'
   bbcode_file:
     description: 'Path to the BBCode-forum changelog file - leave blank to auto-detect CHANGELOG_BBCODE.txt or CHANGELOG_ESOUI.txt'
     required: false
     default: ''
   bbcode_version_marker:
-    description: 'Regex (awk-compatible) matching the start of one version entry in the BBCode file'
+    description: 'Regex matching the start of one version entry in the BBCode file'
     required: false
     default: '^\[b\]\[COLOR="Orange"\]Version '
   github_file:
@@ -19,7 +23,7 @@ inputs:
     required: false
     default: ''
   github_version_marker:
-    description: 'Regex (awk-compatible) matching the start of one version entry in the GitHub file'
+    description: 'Regex matching the start of one version entry in the GitHub file'
     required: false
     default: '^### Version '
   bethesda_file:
@@ -27,43 +31,37 @@ inputs:
     required: false
     default: ''
   bethesda_version_marker:
-    description: 'Regex (awk-compatible) matching the start of one version entry in the Bethesda file'
+    description: 'Regex matching the start of one version entry in the Bethesda file'
     required: false
     default: '^# VERSION '
+  manifest_file:
+    description: 'Optional .addon manifest to also cross-check the version and report the API version - leave blank to skip'
+    required: false
+    default: ''
+  bethesda_optional:
+    description: 'If true, a missing Bethesda file is treated as "not published there yet" instead of an error'
+    required: false
+    default: 'false'
 
 runs:
   using: 'composite'
   steps:
-    - name: Extract latest entry from each changelog file
+    - name: Compare changelog date, version, and content across platforms
       shell: bash
       run: |
-        resolve_file() {
-          local explicit="$1" prefix="$2"
-          shift 2
-          if [ -n "$explicit" ]; then
-            printf '%s\n' "$explicit"
-            return
-          fi
-          local alias match
-          for alias in "$@"; do
-            match=$(find . -maxdepth 1 -iname "${prefix}_${alias}.txt" -print -quit 2>/dev/null)
-            if [ -n "$match" ]; then
-              printf '%s\n' "${match#./}"
-              return
-            fi
-          done
-          printf '%s\n' "${prefix}_${1}.txt"
-        }
-
-        BBCODE_FILE=$(resolve_file "${{ inputs.bbcode_file }}" "CHANGELOG" "BBCODE" "ESOUI")
-        GITHUB_FILE=$(resolve_file "${{ inputs.github_file }}" "CHANGELOG" "GFM" "GITHUB")
-        BETHESDA_FILE=$(resolve_file "${{ inputs.bethesda_file }}" "CHANGELOG" "COMMONMARK" "PLAINMARKDOWN" "BETHESDA")
-
-        awk '/${{ inputs.bbcode_version_marker }}/ { if (found) exit; found=1 } found' "$BBCODE_FILE" > latest_changes_bbcode.txt
-        awk '/${{ inputs.github_version_marker }}/ { if (found) exit; found=1 } found' "$GITHUB_FILE" > latest_changes_github.md
-        awk '/${{ inputs.bethesda_version_marker }}/ { if (found) exit; found=1 } found' "$BETHESDA_FILE" > latest_changes_bethesda.txt
-
-    - name: Compare changelog content across platforms
-      shell: bash
-      run: |
-        python3 "${{ github.action_path }}/compare_changelogs.py" | tee -a "$GITHUB_STEP_SUMMARY"
+        ARGS=(
+          --plain-file "${{ inputs.plain_file }}"
+          --bbcode-file "${{ inputs.bbcode_file }}"
+          --bbcode-version-marker "${{ inputs.bbcode_version_marker }}"
+          --github-file "${{ inputs.github_file }}"
+          --github-version-marker "${{ inputs.github_version_marker }}"
+          --bethesda-file "${{ inputs.bethesda_file }}"
+          --bethesda-version-marker "${{ inputs.bethesda_version_marker }}"
+        )
+        if [ -n "${{ inputs.manifest_file }}" ]; then
+          ARGS+=(--manifest-file "${{ inputs.manifest_file }}")
+        fi
+        if [ "${{ inputs.bethesda_optional }}" == "true" ]; then
+          ARGS+=(--bethesda-optional)
+        fi
+        python3 "${{ github.action_path }}/compare_changelogs.py" "${ARGS[@]}"
