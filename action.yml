@@ -1,5 +1,5 @@
 name: 'Changelog Check'
-description: 'Compares changelog version/date/content across BBCode, GitHub, and Bethesda, and optionally the manifest; fails on any real disagreement.'
+description: 'Compares changelog version, date, and content across BBCode, GitHub, and Bethesda; fails on disagreement.'
 author: 'MPHONlC'
 branding:
   icon: 'file-text'
